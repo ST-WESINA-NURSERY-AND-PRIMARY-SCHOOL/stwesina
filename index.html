@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>St. Wesina School - Comprehensive Portal</title>
+    <!-- Chosen Palette: Calm Harmony with Teal Accent -->
+    <!-- Application Structure Plan: The application is designed as a single-page portal with clear, thematic sections accessed via top-level navigation: Home, Enrollment, Academic Management, and Curriculum Explorer. This structure allows users to jump directly to their area of interest. The Enrollment section further divides into Learner and Teacher enrollment, each with a multi-step form for guided input. Academic Management is protected by a simulated domain-based login, ensuring that its Course, Class, and Semester management sub-sections are accessible only to authorized personnel. This hierarchical and conditional information architecture provides a logical flow, minimizing cognitive load and enhancing user understanding and task completion for different user roles. -->
+    <!-- Visualization & Content Choices:
+        1. Learner Enrollment Form (Report Info: All original form fields + payment -> Goal: Inform/Organize -> Viz/Method: Multi-step form with conditional sections -> Interaction: JS-driven next/back navigation, dynamic field visibility, and a final payment confirmation step -> Justification: Breaks down complex enrollment into manageable, guided steps for new learners. -> Library: Vanilla JS).
+        2. Teacher Enrollment Form (Report Info: New teacher-specific fields -> Goal: Inform/Organize -> Viz/Method: Multi-step form -> Interaction: JS-driven next/back navigation -> Justification: Provides a dedicated, clear process for teacher onboarding. -> Library: Vanilla JS).
+        3. Academic Management (Simulated Login) (Report Info: Access control requirement -> Goal: Restrict Access -> Viz/Method: Email input with domain check -> Interaction: JS validates email domain to unlock admin sections -> Justification: Simulates the required domain-based authentication for sensitive areas. -> Library: Vanilla JS).
+        4. Academic Dashboards (Report Info: Overview of enrollments, courses, etc. -> Goal: Inform/Monitor -> Viz/Method: Key metric displays + Bar Chart (for enrollment types) -> Interaction: N/A -> Justification: Provides quick insights into school operations. -> Library: Chart.js).
+        5. Course/Class/Semester Management (Report Info: Lists of academic entities -> Goal: Organize/Manage -> Viz/Method: Dynamic lists/tables with simple forms -> Interaction: JS add/edit/delete (simulated), rendering updates -> Justification: Allows administrative users to manage core academic data interactively. -> Library: Vanilla JS).
+        6. Secondary Subjects List (Report Info: Table of subjects -> Goal: Compare/Organize -> Viz/Method: Grid of styled HTML cards -> Interaction: JS filters by level (All, O-Level, A-Level) -> Justification: Presents curriculum information visually and interactively. -> Library: Vanilla JS).
+        7. Subject Distribution Chart (Report Info: Counts of O/A-Level subjects -> Goal: Compare -> Viz/Method: Vertical Bar Chart -> Interaction: Tooltips on hover -> Justification: Complements the subject list with a clear quantitative summary. -> Library: Chart.js). -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .form-input {
+            transition: all 0.3s ease;
+        }
+        .form-input:focus {
+            border-color: #5A8D9B; /* New accent color */
+            box-shadow: 0 0 0 2px rgba(90, 141, 155, 0.2); /* New accent color with transparency */
+        }
+        .btn-primary {
+            background-color: #5A8D9B; /* New accent color */
+            color: #FFFFFF;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4A7A89; /* Darker shade of new accent */
+        }
+        .btn-secondary {
+            background-color: #DAEBF0; /* Lighter complementary color */
+            color: #5A8D9B; /* New accent color */
+            transition: background-color 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #C7DDE2; /* Slightly darker complementary */
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            position: relative;
+            padding-bottom: 4px;
+            color: #4A4A4A; /* Default text color */
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #5A8D9B; /* New accent color for underline */
+            transition: width 0.3s ease;
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            width: 100%;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #5A8D9B; /* New accent color for active/hover text */
+        }
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
+        .conditional-section {
+            display: none;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .sub-nav-link {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+        }
+        .sub-nav-link.active {
+            background-color: #DAEBF0; /* Lighter complementary color */
+            color: #5A8D9B; /* New accent color */
+        }
+        .sub-nav-link:hover:not(.active) {
+            background-color: #EAE3DD; /* Existing light beige for subtle hover */
+            color: #715A4D; /* Existing brown for text */
+        }
+        .admin-section-content {
+            display: none;
+        }
+        .admin-section-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-xl font-bold text-[#5A8D9B]">
+                St. Wesina School
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="#home" class="nav-link active" data-section="home">Home</a>
+                <a href="#enrollment" class="nav-link" data-section="enrollment">Enrollment</a>
+                <a href="#academic-management" class="nav-link" data-section="academic-management">Academic Management</a>
+                <a href="#curriculum" class="nav-link" data-section="curriculum">Curriculum Explorer</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <section id="home" class="app-section">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold text-[#715A4D] mb-4">Welcome to St. Wesina School</h1>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Discover a world of learning and growth at St. Wesina Nursery and Primary School. Our comprehensive portal allows seamless enrollment, academic management, and exploration of our diverse curriculum.</p>
+                <div class="mt-8 flex justify-center space-x-4">
+                    <a href="#enrollment" class="btn-primary px-8 py-3 rounded-lg font-semibold text-lg">Enroll Now</a>
+                    <a href="#curriculum" class="btn-secondary px-8 py-3 rounded-lg font-semibold text-lg">Explore Curriculum</a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-[#715A4D] mb-4">Our Mission</h2>
+                    <p class="text-gray-600">To provide holistic education that nurtures intellectual, social, emotional, and spiritual growth, preparing students to be responsible and impactful citizens.</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-[#715A4D] mb-4">Our Vision</h2>
+                    <p class="text-gray-600">To be a leading educational institution fostering excellence, innovation, and a lifelong love for learning in a supportive community.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="enrollment" class="app-section hidden">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold text-[#715A4D] mb-4">Enrollment Center</h1>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Choose your enrollment path below: for new students joining our family or for dedicated teachers seeking to inspire.</p>
+            </div>
+
+            <div class="bg-white p-6 md:p-10 rounded-2xl shadow-lg max-w-4xl mx-auto">
+                <div class="flex justify-center mb-8 border-b pb-4 space-x-4">
+                    <div class="sub-nav-link active" data-enroll-type="learner">Learner Enrollment</div>
+                    <div class="sub-nav-link" data-enroll-type="teacher">Teacher Enrollment</div>
+                </div>
+
+                <div id="learner-enrollment-form-container">
+                    <div id="learner-form-steps">
+                        <div class="form-step active" data-step="1" data-form-type="learner">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 1: Personal Details</h2>
+                            <p class="text-gray-600 mb-6">Please provide the learner's personal information.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label for="learnerFullName" class="block text-sm font-medium text-gray-700 mb-1">Full Name (Required)</label><input type="text" id="learnerFullName" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="learnerDob" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Required)</label><input type="date" id="learnerDob" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Gender (Required)</label><select id="learnerGender" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                                <div><label for="learnerPhone" class="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian Phone (Required)</label><input type="tel" id="learnerPhone" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div class="md:col-span-2"><label for="learnerAddress" class="block text-sm font-medium text-gray-700 mb-1">Address (Required)</label><input type="text" id="learnerAddress" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div class="md:col-span-2"><label for="learnerEmail" class="block text-sm font-medium text-gray-700 mb-1">Parent/Guardian Email (Required)</label><input type="email" id="learnerEmail" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                            </div>
+                            <div class="mt-8 flex justify-end"><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextLearnerStep()">Next</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="2" data-form-type="learner">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 2: Educational Information</h2>
+                            <p class="text-gray-600 mb-6">Details about the learner's academic background.</p>
+                            <div><label for="learnerGradeLevel" class="block text-sm font-medium text-gray-700 mb-1">Current Grade/Level (Required)</label><select id="learnerGradeLevel" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required><option value="">Select Grade</option><option>Nursery</option><option>Primary 1</option><option>Primary 2</option><option>Primary 3</option><option>Primary 4</option><option>Primary 5</option><option>Primary 6</option><option>Primary 7</option></select></div>
+                            <div class="mt-4"><label for="learnerPrevSchool" class="block text-sm font-medium text-gray-700 mb-1">Previous School (If applicable)</label><input type="text" id="learnerPrevSchool" class="form-input w-full border-gray-300 rounded-lg shadow-sm"></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevLearnerStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextLearnerStep()">Next</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="3" data-form-type="learner">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 3: Workspace & Reason</h2>
+                            <p class="text-gray-600 mb-6">Select preferred digital tools and explain enrollment interest.</p>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Select the Workspace(s) you are interested in (Required)</label><div class="space-y-2"><label class="flex items-center"><input type="checkbox" name="learnerWorkspace" value="Microsoft 365" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded"> <span class="ml-2">Microsoft 365</span></label><label class="flex items-center"><input type="checkbox" name="learnerWorkspace" value="Google Workspace" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded"> <span class="ml-2">Google Workspace</span></label></div></div>
+                            <div class="mt-6"><label for="learnerReason" class="block text-sm font-medium text-gray-700 mb-1">Briefly explain why you are enrolling (Required)</label><textarea id="learnerReason" rows="4" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></textarea></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevLearnerStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextLearnerStep()">Next</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="4" data-form-type="learner">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 4: Admission Payment Details</h2>
+                            <p class="text-gray-600 mb-6">Please provide details for the admission payment of UGX 50,000. Enrollment is complete upon payment verification.</p>
+                            <div class="space-y-6">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Payment Type</label><input type="text" value="Admission Fee" class="form-input w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm" readonly></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Amount Due (UGX)</label><input type="text" value="50,000 UGX" class="form-input w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm" readonly></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Payment Method (Required)</label><div class="space-y-2"><label class="flex items-center"><input type="radio" name="learnerPaymentMethod" value="Bank Deposit/Transfer" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded" required> <span class="ml-2">Bank Deposit/Transfer</span></label><label class="flex items-center"><input type="radio" name="learnerPaymentMethod" value="Mobile Money" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded"> <span class="ml-2">Mobile Money</span></label></div></div>
+                                <div><label for="learnerTransactionId" class="block text-sm font-medium text-gray-700 mb-1">Transaction ID / Ref. (Required)</label><input type="text" id="learnerTransactionId" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="learnerPaymentDate" class="block text-sm font-medium text-gray-700 mb-1">Date of Payment (Required)</label><input type="date" id="learnerPaymentDate" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="learnerBankNetwork" class="block text-sm font-medium text-gray-700 mb-1">Bank Name / Mobile Money Network (If applicable)</label><input type="text" id="learnerBankNetwork" class="form-input w-full border-gray-300 rounded-lg shadow-sm"></div>
+                            </div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevLearnerStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextLearnerStep()">Review</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="5" data-form-type="learner">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 5: Review & Submit</h2>
+                            <p class="text-gray-600 mb-6">Please review all details for the learner's enrollment before final submission.</p>
+                            <div id="learner-review-section" class="space-y-4 bg-stone-50 p-6 rounded-lg"></div>
+                            <div class="mt-6"><label class="flex items-start"><input type="checkbox" id="learnerAcknowledgement" class="h-5 w-5 mt-1 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded" required><span class="ml-3 text-sm">I certify that the information provided above is true and accurate. I understand that submitting false information may result in the rejection of this application or dismissal.</span></label></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevLearnerStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="submitLearnerForm()">Submit Enrollment</button></div>
+                        </div>
+                    </div>
+                    <div id="learner-success-message" class="hidden text-center py-12">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl text-green-600">✓</span></div>
+                        <h2 class="text-2xl font-bold text-[#715A4D]">Learner Enrollment Submitted!</h2>
+                        <p class="text-gray-600 mt-2">Thank you for enrolling a learner at St. Wesina Nursery and Primary School. Your application, including payment details, has been received. We will be in touch shortly to confirm admission.</p>
+                    </div>
+                </div>
+
+                <div id="teacher-enrollment-form-container" class="hidden">
+                     <div id="teacher-form-steps">
+                        <div class="form-step active" data-step="1" data-form-type="teacher">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 1: Personal Details (Teacher)</h2>
+                            <p class="text-gray-600 mb-6">Please provide your personal information as a prospective teacher.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label for="teacherFullName" class="block text-sm font-medium text-gray-700 mb-1">Full Name (Required)</label><input type="text" id="teacherFullName" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="teacherDob" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth (Required)</label><input type="date" id="teacherDob" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Gender (Required)</label><select id="teacherGender" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required><option value="">Select Gender</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                                <div><label for="teacherPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number (Required)</label><input type="tel" id="teacherPhone" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div class="md:col-span-2"><label for="teacherAddress" class="block text-sm font-medium text-gray-700 mb-1">Address (Required)</label><input type="text" id="teacherAddress" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div class="md:col-span-2"><label for="teacherEmail" class="block text-sm font-medium text-gray-700 mb-1">Email Address (Required)</label><input type="email" id="teacherEmail" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                            </div>
+                            <div class="mt-8 flex justify-end"><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextTeacherStep()">Next</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="2" data-form-type="teacher">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 2: Professional Details</h2>
+                            <p class="text-gray-600 mb-6">Details about your qualifications and teaching experience.</p>
+                            <div><label for="teacherQualification" class="block text-sm font-medium text-gray-700 mb-1">Highest Qualification (Required)</label><input type="text" id="teacherQualification" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                            <div class="mt-4"><label class="block text-sm font-medium text-gray-700 mb-2">Subjects You Can Teach (Required)</label><div id="teacher-subjects-enroll" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevTeacherStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextTeacherStep()">Next</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="3" data-form-type="teacher">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 3: Workspace & Motivation</h2>
+                            <p class="text-gray-600 mb-6">Select your preferred digital tools and explain your interest in teaching at St. Wesina.</p>
+                             <div><label class="block text-sm font-medium text-gray-700 mb-2">Select the Workspace(s) you are interested in (Required)</label><div class="space-y-2"><label class="flex items-center"><input type="checkbox" name="teacherWorkspace" value="Microsoft 365" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded"> <span class="ml-2">Microsoft 365</span></label><label class="flex items-center"><input type="checkbox" name="teacherWorkspace" value="Google Workspace" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded"> <span class="ml-2">Google Workspace</span></label></div></div>
+                             <div class="mt-6"><label for="teacherMotivation" class="block text-sm font-medium text-gray-700 mb-1">Briefly explain your motivation to teach at St. Wesina (Required)</label><textarea id="teacherMotivation" rows="4" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></textarea></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevTeacherStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="nextTeacherStep()">Review</button></div>
+                        </div>
+
+                        <div class="form-step" data-step="4" data-form-type="teacher">
+                            <h2 class="text-2xl font-bold mb-2 text-[#715A4D]">Step 4: Review & Submit (Teacher)</h2>
+                            <p class="text-gray-600 mb-6">Please review all details for your teacher application before final submission.</p>
+                            <div id="teacher-review-section" class="space-y-4 bg-stone-50 p-6 rounded-lg"></div>
+                            <div class="mt-6"><label class="flex items-start"><input type="checkbox" id="teacherAcknowledgement" class="h-5 w-5 mt-1 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded" required><span class="ml-3 text-sm">I certify that the information provided above is true and accurate. I understand that submitting false information may result in the rejection of this application.</span></label></div>
+                            <div class="mt-8 flex justify-between"><button class="btn-secondary px-6 py-2 rounded-lg font-semibold" onclick="prevTeacherStep()">Back</button><button class="btn-primary px-6 py-2 rounded-lg font-semibold" onclick="submitTeacherForm()">Submit Application</button></div>
+                        </div>
+                     </div>
+                     <div id="teacher-success-message" class="hidden text-center py-12">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><span class="text-3xl text-green-600">✓</span></div>
+                        <h2 class="text-2xl font-bold text-[#715A4D]">Teacher Application Submitted!</h2>
+                        <p class="text-gray-600 mt-2">Thank you for your interest in teaching at St. Wesina. We have received your application and will contact you regarding next steps.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="academic-management" class="app-section hidden">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold text-[#715A4D] mb-4">Academic Management</h1>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">This section is for authorized school administration and staff to manage courses, classes, and academic semesters. Please login with your official school email.</p>
+            </div>
+
+            <div id="admin-login-prompt" class="bg-white p-8 rounded-2xl shadow-lg max-w-md mx-auto text-center">
+                <h2 class="text-2xl font-bold mb-4 text-[#715A4D]">Admin Login</h2>
+                <p class="text-gray-600 mb-6">Access requires a Google Workspace or Microsoft 365 Education email from <strong>@drwesina.com</strong> or <strong>@mrwesina.com</strong>.</p>
+                <input type="email" id="adminEmail" class="form-input w-full border-gray-300 rounded-lg shadow-sm px-4 py-2 mb-4" placeholder="Your school email (e.g., admin@drwesina.com)">
+                <button class="btn-primary px-6 py-2 rounded-lg font-semibold w-full" onclick="simulateAdminLogin()">Login</button>
+                <p id="login-error" class="text-red-500 text-sm mt-3 hidden">Invalid email domain. Please use your official school email.</p>
+            </div>
+
+            <div id="admin-dashboard-container" class="hidden">
+                 <div class="bg-white p-6 md:p-10 rounded-2xl shadow-lg max-w-7xl mx-auto">
+                    <div class="flex justify-center mb-8 border-b pb-4 space-x-4">
+                        <div class="sub-nav-link active" data-admin-view="dashboard">Dashboard</div>
+                        <div class="sub-nav-link" data-admin-view="course-management">Course Management</div>
+                        <div class="sub-nav-link" data-admin-view="class-management">Class Management</div>
+                        <div class="sub-nav-link" data-admin-view="semester-management">Semester Management</div>
+                    </div>
+
+                    <div id="admin-dashboard" class="admin-section-content active">
+                        <h2 class="text-2xl font-bold mb-4 text-[#715A4D]">Dashboard Overview</h2>
+                        <p class="text-gray-600 mb-6">A snapshot of key metrics for St. Wesina School.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-stone-50 p-6 rounded-lg shadow-sm text-center">
+                                <h3 class="text-xl font-semibold text-[#5A8D9B]">Total Learners</h3>
+                                <p id="dashboard-total-learners" class="text-4xl font-bold text-[#715A4D] mt-2">0</p>
+                            </div>
+                            <div class="bg-stone-50 p-6 rounded-lg shadow-sm text-center">
+                                <h3 class="text-xl font-semibold text-[#5A8D9B]">Total Teachers</h3>
+                                <p id="dashboard-total-teachers" class="text-4xl font-bold text-[#715A4D] mt-2">0</p>
+                            </div>
+                            <div class="bg-stone-50 p-6 rounded-lg shadow-sm text-center">
+                                <h3 class="text-xl font-semibold text-[#5A8D9B]">Active Courses</h3>
+                                <p id="dashboard-total-courses" class="text-4xl font-bold text-[#715A4D] mt-2">0</p>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 text-[#715A4D]">Enrollment Breakdown by Type</h3>
+                        <div class="chart-container">
+                            <canvas id="enrollmentChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="course-management" class="admin-section-content">
+                        <h2 class="text-2xl font-bold mb-4 text-[#715A4D]">Course Management</h2>
+                        <p class="text-gray-600 mb-6">Manage university-level courses offered by the institution.</p>
+                        <div class="bg-stone-50 p-6 rounded-lg shadow-sm mb-6">
+                            <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Add New Course</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label for="courseName" class="block text-sm font-medium text-gray-700 mb-1">Course Name (Required)</label><input type="text" id="courseName" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="courseCode" class="block text-sm font-medium text-gray-700 mb-1">Course Code (Required)</label><input type="text" id="courseCode" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div class="md:col-span-2"><label for="courseDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea id="courseDescription" rows="2" class="form-input w-full border-gray-300 rounded-lg shadow-sm"></textarea></div>
+                            </div>
+                            <button class="btn-primary px-6 py-2 rounded-lg font-semibold mt-4" onclick="addCourse()">Add Course</button>
+                        </div>
+                        <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Current Courses</h3>
+                        <div id="courses-list" class="space-y-4"></div>
+                    </div>
+
+                    <div id="class-management" class="admin-section-content">
+                        <h2 class="text-2xl font-bold mb-4 text-[#715A4D]">Class Management</h2>
+                        <p class="text-gray-600 mb-6">Organize and manage classes within the primary and university levels.</p>
+                        <div class="bg-stone-50 p-6 rounded-lg shadow-sm mb-6">
+                            <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Add New Class</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label for="className" class="block text-sm font-medium text-gray-700 mb-1">Class Name (Required)</label><input type="text" id="className" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="classLevel" class="block text-sm font-medium text-gray-700 mb-1">Level (Primary/University) (Required)</label><input type="text" id="classLevel" class="form-input w-full border-gray-300 rounded-lg shadow-sm" placeholder="e.g., Primary 1, Year 1" required></div>
+                                <div><label for="classTeacher" class="block text-sm font-medium text-gray-700 mb-1">Assigned Teacher (Optional)</label><input type="text" id="classTeacher" class="form-input w-full border-gray-300 rounded-lg shadow-sm" placeholder="e.g., Mr. John Doe"></div>
+                            </div>
+                            <button class="btn-primary px-6 py-2 rounded-lg font-semibold mt-4" onclick="addClass()">Add Class</button>
+                        </div>
+                        <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Current Classes</h3>
+                        <div id="classes-list" class="space-y-4"></div>
+                    </div>
+
+                    <div id="semester-management" class="admin-section-content">
+                        <h2 class="text-2xl font-bold mb-4 text-[#715A4D]">Semester Management</h2>
+                        <p class="text-gray-600 mb-6">Define and manage academic semesters for all levels.</p>
+                        <div class="bg-stone-50 p-6 rounded-lg shadow-sm mb-6">
+                            <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Add New Semester</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label for="semesterName" class="block text-sm font-medium text-gray-700 mb-1">Semester Name (Required)</label><input type="text" id="semesterName" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="semesterStartDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date (Required)</label><input type="date" id="semesterStartDate" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="semesterEndDate" class="block text-sm font-medium text-gray-700 mb-1">End Date (Required)</label><input type="date" id="semesterEndDate" class="form-input w-full border-gray-300 rounded-lg shadow-sm" required></div>
+                                <div><label for="semesterStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="semesterStatus" class="form-input w-full border-gray-300 rounded-lg shadow-sm"><option>Active</option><option>Upcoming</option><option>Completed</option></select></div>
+                            </div>
+                            <button class="btn-primary px-6 py-2 rounded-lg font-semibold mt-4" onclick="addSemester()">Add Semester</button>
+                        </div>
+                        <h3 class="text-xl font-semibold text-[#5A8D9B] mb-4">Current Semesters</h3>
+                        <div id="semesters-list" class="space-y-4"></div>
+                    </div>
+                 </div>
+            </div>
+        </section>
+
+        <section id="curriculum" class="app-section hidden">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold text-[#715A4D] mb-4">Curriculum Explorer</h1>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">This section provides reference information on the subjects offered at the secondary school level in Uganda, which follows our primary education. Use the filters to explore the curriculum and see a visual breakdown of subjects by level.</p>
+            </div>
+
+            <div class="bg-white p-6 md:p-10 rounded-2xl shadow-lg max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3">
+                        <h3 class="text-xl font-bold mb-4">Subject Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="subjectsChart"></canvas>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-xl font-bold mb-4">Filter by Level</h3>
+                            <div id="filter-buttons" class="flex flex-wrap gap-2">
+                                <button data-filter="all" class="btn-primary px-4 py-2 rounded-md text-sm font-semibold">All Subjects</button>
+                                <button data-filter="O.LEVEL" class="btn-secondary px-4 py-2 rounded-md text-sm font-semibold">O-Level</button>
+                                <button data-filter="A.LEVEL" class="btn-secondary px-4 py-2 rounded-md text-sm font-semibold">A-Level</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:w-2/3">
+                        <h3 class="text-xl font-bold mb-4">Subject List</h3>
+                        <div id="subjects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white mt-16 border-t">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-600">
+            <h3 class="text-xl font-bold text-[#5A8D9B]">St. Wesina Nursery and Primary School</h3>
+            <p class="mt-2">Website: <a href="http://www.drwesina.com" target="_blank" class="hover:underline">www.drwesina.com</a></p>
+            <p>Contact: +256786244248 | wesinaj@gmail.com</p>
+            <p class="mt-4 text-sm">&copy; 2025 St. Wesina Nursery and Primary School. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const subjectData = [
+            { name: "BIOLOGY", level: "O.LEVEL" },
+            { name: "CHEMISTRY", level: "O.LEVEL" },
+            { name: "PHYSICS", level: "O.LEVEL" },
+            { name: "PRINCIPLES AND PRACTICES AGRICULTURE", level: "O.LEVEL" },
+            { name: "CHRISTIAN RELIGIOUS EDUCATION", level: "O.LEVEL" },
+            { name: "KISWAHILI", level: "O.LEVEL" },
+            { name: "HISTORY", level: "O.LEVEL" },
+            { name: "PHYSICAL EDUCATION", level: "O.LEVEL" },
+            { name: "ART AND DESIGN", level: ["O.LEVEL", "A.LEVEL"] },
+            { name: "GEOGRAPHY", level: "O.LEVEL" },
+            { name: "MATHEMATICS", level: "O.LEVEL" },
+            { name: "ENTREPRENEURSHIP AND MANAGEMENT", level: ["O.LEVEL", "A.LEVEL"] },
+            { name: "ECONOMICS", level: "A.LEVEL" },
+            { name: "DIVINITY", level: "A.LEVEL" },
+            { name: "HISTORY", level: "A.LEVEL" },
+            { name: "INFORMATION AND COMMUNICATION TECHNOLOGY", level: ["O.LEVEL", "A.LEVEL"] },
+            { name: "GEOGRAPHY PAPER ONE", level: "A.LEVEL" },
+            { name: "GEOGRAPHY PAPER TWO", level: "A.LEVEL" },
+            { name: "GEOGRAPHY PAPER THREE", level: "A.LEVEL" },
+            { name: "SUB MATHEMATICS", level: "A.LEVEL" }
+        ];
+
+        const TEACHER_SUBJECTS_OPTIONS = ["Mathematics", "Science", "English", "Social Studies", "Religious Education", "Art", "Physical Education", "Luganda", "ICT", "Music", "Agriculture"];
+
+        let currentLearnerStep = 1;
+        const totalLearnerSteps = 5;
+
+        let currentTeacherStep = 1;
+        const totalTeacherSteps = 4;
+
+        let learners = [];
+        let teachers = [];
+        let courses = [];
+        let classes = [];
+        let semesters = [];
+
+        let enrollmentChartInstance;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNav();
+            setupEnrollmentForms();
+            renderSubjects('all');
+            setupChart();
+            setupFilters();
+            updateDashboardMetrics();
+            renderCourses();
+            renderClasses();
+            renderSemesters();
+        });
+
+        function setupNav() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.app-section');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('data-section');
+
+                    sections.forEach(sec => sec.classList.add('hidden'));
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                });
+            });
+        }
+
+        function setupEnrollmentForms() {
+            const enrollTypeLinks = document.querySelectorAll('[data-enroll-type]');
+            enrollTypeLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    enrollTypeLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    const type = link.getAttribute('data-enroll-type');
+
+                    document.getElementById('learner-enrollment-form-container').classList.add('hidden');
+                    document.getElementById('teacher-enrollment-form-container').classList.add('hidden');
+
+                    if (type === 'learner') {
+                        document.getElementById('learner-enrollment-form-container').classList.remove('hidden');
+                        navigateToLearnerStep(1);
+                    } else if (type === 'teacher') {
+                        document.getElementById('teacher-enrollment-form-container').classList.remove('hidden');
+                        navigateToTeacherStep(1);
+                    }
+                });
+            });
+
+            const teacherSubjectsContainer = document.getElementById('teacher-subjects-enroll');
+            teacherSubjectsContainer.innerHTML = TEACHER_SUBJECTS_OPTIONS.map(subject => `
+                <label class="flex items-center text-sm">
+                    <input type="checkbox" name="teacherEnrollSubject" value="${subject}" class="h-4 w-4 text-[#5A8D9B] focus:ring-[#5A8D9B] rounded">
+                    <span class="ml-2">${subject}</span>
+                </label>
+            `).join('');
+        }
+
+        function navigateToLearnerStep(step) {
+            if (step > totalLearnerSteps || step < 1) return;
+            if (step === totalLearnerSteps) {
+                populateLearnerReview();
+            }
+            document.querySelectorAll('#learner-form-steps .form-step').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#learner-form-steps .form-step[data-step="${step}"][data-form-type="learner"]`).classList.add('active');
+            currentLearnerStep = step;
+        }
+
+        function nextLearnerStep() {
+            if (!validateForm('learner')) {
+                alert('Please fill out all required fields in this step.');
+                return;
+            }
+            if (currentLearnerStep < totalLearnerSteps) {
+                navigateToLearnerStep(currentLearnerStep + 1);
+            }
+        }
+
+        function prevLearnerStep() {
+            if (currentLearnerStep > 1) {
+                navigateToLearnerStep(currentLearnerStep - 1);
+            }
+        }
+
+        function populateLearnerReview() {
+            const workspaces = Array.from(document.querySelectorAll('input[name="learnerWorkspace"]:checked')).map(cb => cb.value).join(', ');
+            const paymentMethod = document.querySelector('input[name="learnerPaymentMethod"]:checked')?.value || 'N/A';
+
+            document.getElementById('learner-review-section').innerHTML = `
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Personal Details</h3>
+                <p><strong>Full Name:</strong> ${document.getElementById('learnerFullName').value}</p>
+                <p><strong>Date of Birth:</strong> ${document.getElementById('learnerDob').value}</p>
+                <p><strong>Gender:</strong> ${document.getElementById('learnerGender').value}</p>
+                <p><strong>Parent/Guardian Phone:</strong> ${document.getElementById('learnerPhone').value}</p>
+                <p><strong>Parent/Guardian Email:</strong> ${document.getElementById('learnerEmail').value}</p>
+                <p><strong>Address:</strong> ${document.getElementById('learnerAddress').value}</p>
+                <hr class="my-4">
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Educational Information</h3>
+                <p><strong>Current Grade/Level:</strong> ${document.getElementById('learnerGradeLevel').value}</p>
+                <p><strong>Previous School:</strong> ${document.getElementById('learnerPrevSchool').value || 'N/A'}</p>
+                <hr class="my-4">
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Workspace & Reason</h3>
+                <p><strong>Workspaces:</strong> ${workspaces || 'None selected'}</p>
+                <p><strong>Reason for Enrollment:</strong> ${document.getElementById('learnerReason').value}</p>
+                <hr class="my-4">
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Admission Payment Details</h3>
+                <p><strong>Payment Type:</strong> Admission Fee</p>
+                <p><strong>Amount Due:</strong> 50,000 UGX</p>
+                <p><strong>Payment Method:</strong> ${paymentMethod}</p>
+                <p><strong>Transaction ID / Ref.:</strong> ${document.getElementById('learnerTransactionId').value}</p>
+                <p><strong>Date of Payment:</strong> ${document.getElementById('learnerPaymentDate').value}</p>
+                <p><strong>Bank/Network:</strong> ${document.getElementById('learnerBankNetwork').value || 'N/A'}</p>
+            `;
+        }
+
+        function validateForm(formType) {
+            let isValid = true;
+            const currentActiveStep = document.querySelector(`#${formType}-form-steps .form-step.active[data-form-type="${formType}"]`);
+            const requiredFields = currentActiveStep.querySelectorAll('[required]');
+
+            requiredFields.forEach(field => {
+                if (field.type === 'radio' || field.type === 'checkbox') {
+                    const groupName = field.name;
+                    const groupContainer = field.closest('div'); // Adjust as needed to get the containing div for the group
+                    if (currentActiveStep.querySelectorAll(`input[name="${groupName}"]:checked`).length === 0) {
+                        isValid = false;
+                        groupContainer.style.outline = '2px solid red';
+                        groupContainer.style.borderRadius = '5px';
+                    } else {
+                        groupContainer.style.outline = '';
+                    }
+                } else if (!field.value) {
+                    isValid = false;
+                    field.style.borderColor = 'red';
+                } else {
+                    field.style.borderColor = '';
+                }
+            });
+
+            const acknowledgementCheckbox = document.getElementById(`${formType}Acknowledgement`);
+            if (acknowledgementCheckbox && acknowledgementCheckbox.closest('.form-step').classList.contains('active') && !acknowledgementCheckbox.checked) {
+                isValid = false;
+                acknowledgementCheckbox.closest('label').style.color = 'red';
+            } else if (acknowledgementCheckbox && acknowledgementCheckbox.closest('.form-step').classList.contains('active')) {
+                 acknowledgementCheckbox.closest('label').style.color = '';
+            }
+
+            return isValid;
+        }
+
+
+        function submitLearnerForm() {
+             if (validateForm('learner')) {
+                const learnerData = {
+                    fullName: document.getElementById('learnerFullName').value,
+                    dob: document.getElementById('learnerDob').value,
+                    gender: document.getElementById('learnerGender').value,
+                    phone: document.getElementById('learnerPhone').value,
+                    email: document.getElementById('learnerEmail').value,
+                    address: document.getElementById('learnerAddress').value,
+                    gradeLevel: document.getElementById('learnerGradeLevel').value,
+                    prevSchool: document.getElementById('learnerPrevSchool').value,
+                    workspaces: Array.from(document.querySelectorAll('input[name="learnerWorkspace"]:checked')).map(cb => cb.value),
+                    reason: document.getElementById('learnerReason').value,
+                    payment: {
+                        method: document.querySelector('input[name="learnerPaymentMethod"]:checked')?.value,
+                        transactionId: document.getElementById('learnerTransactionId').value,
+                        paymentDate: document.getElementById('learnerPaymentDate').value,
+                        bankNetwork: document.getElementById('learnerBankNetwork').value
+                    }
+                };
+                learners.push(learnerData);
+                updateDashboardMetrics();
+
+                document.getElementById('learner-form-steps').classList.add('hidden');
+                document.getElementById('learner-success-message').classList.remove('hidden');
+            } else {
+                alert('Please fill out all required fields and agree to the terms.');
+            }
+        }
+
+        function navigateToTeacherStep(step) {
+            if (step > totalTeacherSteps || step < 1) return;
+            if (step === totalTeacherSteps) {
+                populateTeacherReview();
+            }
+            document.querySelectorAll('#teacher-form-steps .form-step').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#teacher-form-steps .form-step[data-step="${step}"][data-form-type="teacher"]`).classList.add('active');
+            currentTeacherStep = step;
+        }
+
+        function nextTeacherStep() {
+            if (!validateForm('teacher')) {
+                alert('Please fill out all required fields in this step.');
+                return;
+            }
+            if (currentTeacherStep < totalTeacherSteps) {
+                navigateToTeacherStep(currentTeacherStep + 1);
+            }
+        }
+
+        function prevTeacherStep() {
+            if (currentTeacherStep > 1) {
+                navigateToTeacherStep(currentTeacherStep - 1);
+            }
+        }
+
+        function populateTeacherReview() {
+            const workspaces = Array.from(document.querySelectorAll('input[name="teacherWorkspace"]:checked')).map(cb => cb.value).join(', ');
+            const subjects = Array.from(document.querySelectorAll('input[name="teacherEnrollSubject"]:checked')).map(cb => cb.value).join(', ');
+
+            document.getElementById('teacher-review-section').innerHTML = `
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Personal Details</h3>
+                <p><strong>Full Name:</strong> ${document.getElementById('teacherFullName').value}</p>
+                <p><strong>Date of Birth:</strong> ${document.getElementById('teacherDob').value}</p>
+                <p><strong>Gender:</strong> ${document.getElementById('teacherGender').value}</p>
+                <p><strong>Phone:</strong> ${document.getElementById('teacherPhone').value}</p>
+                <p><strong>Email:</strong> ${document.getElementById('teacherEmail').value}</p>
+                <p><strong>Address:</strong> ${document.getElementById('teacherAddress').value}</p>
+                <hr class="my-4">
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Professional Details</h3>
+                <p><strong>Highest Qualification:</strong> ${document.getElementById('teacherQualification').value}</p>
+                <p><strong>Subjects Can Teach:</strong> ${subjects || 'None selected'}</p>
+                <hr class="my-4">
+                <h3 class="text-lg font-semibold text-[#715A4D] mb-2">Workspace & Motivation</h3>
+                <p><strong>Workspaces:</strong> ${workspaces || 'None selected'}</p>
+                <p><strong>Motivation:</strong> ${document.getElementById('teacherMotivation').value}</p>
+            `;
+        }
+
+
+        function submitTeacherForm() {
+            if (validateForm('teacher')) {
+                const teacherData = {
+                    fullName: document.getElementById('teacherFullName').value,
+                    dob: document.getElementById('teacherDob').value,
+                    gender: document.getElementById('teacherGender').value,
+                    phone: document.getElementById('teacherPhone').value,
+                    email: document.getElementById('teacherEmail').value,
+                    address: document.getElementById('teacherAddress').value,
+                    qualification: document.getElementById('teacherQualification').value,
+                    subjects: Array.from(document.querySelectorAll('input[name="teacherEnrollSubject"]:checked')).map(cb => cb.value),
+                    workspaces: Array.from(document.querySelectorAll('input[name="teacherWorkspace"]:checked')).map(cb => cb.value),
+                    motivation: document.getElementById('teacherMotivation').value
+                };
+                teachers.push(teacherData);
+                updateDashboardMetrics();
+
+                document.getElementById('teacher-form-steps').classList.add('hidden');
+                document.getElementById('teacher-success-message').classList.remove('hidden');
+            } else {
+                alert('Please fill out all required fields and agree to the terms.');
+            }
+        }
+
+        function simulateAdminLogin() {
+            const adminEmail = document.getElementById('adminEmail').value;
+            const loginError = document.getElementById('login-error');
+            const domain = adminEmail.split('@')[1];
+
+            if (domain === 'drwesina.com' || domain === 'mrwesina.com') {
+                document.getElementById('admin-login-prompt').classList.add('hidden');
+                document.getElementById('admin-dashboard-container').classList.remove('hidden');
+                loginError.classList.add('hidden');
+                updateDashboardMetrics();
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        function setupAdminNav() {
+            const adminNavLinks = document.querySelectorAll('[data-admin-view]');
+            const adminSections = document.querySelectorAll('.admin-section-content');
+
+            adminNavLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    adminNavLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+
+                    const view = link.getAttribute('data-admin-view');
+                    adminSections.forEach(sec => sec.classList.remove('active'));
+                    document.getElementById(view).classList.add('active');
+
+                    if (view === 'dashboard') updateDashboardMetrics();
+                    if (view === 'course-management') renderCourses();
+                    if (view === 'class-management') renderClasses();
+                    if (view === 'semester-management') renderSemesters();
+                });
+            });
+        }
+        setupAdminNav();
+
+        function updateDashboardMetrics() {
+            document.getElementById('dashboard-total-learners').textContent = learners.length;
+            document.getElementById('dashboard-total-teachers').textContent = teachers.length;
+            document.getElementById('dashboard-total-courses').textContent = courses.length;
+
+            updateEnrollmentChart();
+        }
+
+        function updateEnrollmentChart() {
+            if (enrollmentChartInstance) {
+                enrollmentChartInstance.destroy();
+            }
+            const ctx = document.getElementById('enrollmentChart').getContext('2d');
+            enrollmentChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Learners Enrolled', 'Teachers Enrolled'],
+                    datasets: [{
+                        label: 'Count',
+                        data: [learners.length, teachers.length],
+                        backgroundColor: [
+                            'rgba(90, 141, 155, 0.6)', /* New accent color */
+                            'rgba(113, 169, 184, 0.6)' /* Lighter accent color */
+                        ],
+                        borderColor: [
+                            'rgba(90, 141, 155, 1)',
+                            'rgba(113, 169, 184, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            },
+                            grid: {
+                                color: '#F0F0F0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function addCourse() {
+            const name = document.getElementById('courseName').value;
+            const code = document.getElementById('courseCode').value;
+            const description = document.getElementById('courseDescription').value;
+
+            if (name && code) {
+                courses.push({ id: Date.now(), name, code, description });
+                document.getElementById('courseName').value = '';
+                document.getElementById('courseCode').value = '';
+                document.getElementById('courseDescription').value = '';
+                renderCourses();
+                updateDashboardMetrics();
+            } else {
+                alert('Course Name and Code are required.');
+            }
+        }
+
+        function renderCourses() {
+            const list = document.getElementById('courses-list');
+            list.innerHTML = '';
+            if (courses.length === 0) {
+                list.innerHTML = '<p class="text-gray-500">No courses added yet.</p>';
+                return;
+            }
+            courses.forEach(course => {
+                const div = document.createElement('div');
+                div.className = 'bg-stone-50 p-4 rounded-lg border border-stone-200 flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-md text-[#715A4D]">${course.name} (${course.code})</h4>
+                        <p class="text-sm text-gray-600">${course.description || 'No description'}</p>
+                    </div>
+                    <div>
+                        <button class="btn-secondary px-3 py-1 rounded-md text-sm" onclick="deleteItem('course', ${course.id})">Delete</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addClass() {
+            const name = document.getElementById('className').value;
+            const level = document.getElementById('classLevel').value;
+            const teacher = document.getElementById('classTeacher').value;
+
+            if (name && level) {
+                classes.push({ id: Date.now(), name, level, teacher });
+                document.getElementById('className').value = '';
+                document.getElementById('classLevel').value = '';
+                document.getElementById('classTeacher').value = '';
+                renderClasses();
+                updateDashboardMetrics();
+            } else {
+                alert('Class Name and Level are required.');
+            }
+        }
+
+        function renderClasses() {
+            const list = document.getElementById('classes-list');
+            list.innerHTML = '';
+            if (classes.length === 0) {
+                list.innerHTML = '<p class="text-gray-500">No classes added yet.</p>';
+                return;
+            }
+            classes.forEach(cls => {
+                const div = document.createElement('div');
+                div.className = 'bg-stone-50 p-4 rounded-lg border border-stone-200 flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-md text-[#715A4D]">${cls.name} (${cls.level})</h4>
+                        <p class="text-sm text-gray-600">Teacher: ${cls.teacher || 'Unassigned'}</p>
+                    </div>
+                    <div>
+                        <button class="btn-secondary px-3 py-1 rounded-md text-sm" onclick="deleteItem('class', ${cls.id})">Delete</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addSemester() {
+            const name = document.getElementById('semesterName').value;
+            const startDate = document.getElementById('semesterStartDate').value;
+            const endDate = document.getElementById('semesterEndDate').value;
+            const status = document.getElementById('semesterStatus').value;
+
+            if (name && startDate && endDate) {
+                semesters.push({ id: Date.now(), name, startDate, endDate, status });
+                document.getElementById('semesterName').value = '';
+                document.getElementById('semesterStartDate').value = '';
+                document.getElementById('semesterEndDate').value = '';
+                document.getElementById('semesterStatus').value = 'Active';
+                renderSemesters();
+                updateDashboardMetrics();
+            } else {
+                alert('Semester Name, Start Date, and End Date are required.');
+            }
+        }
+
+        function renderSemesters() {
+            const list = document.getElementById('semesters-list');
+            list.innerHTML = '';
+            if (semesters.length === 0) {
+                list.innerHTML = '<p class="text-gray-500">No semesters added yet.</p>';
+                return;
+            }
+            semesters.forEach(sem => {
+                const div = document.createElement('div');
+                div.className = 'bg-stone-50 p-4 rounded-lg border border-stone-200 flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-md text-[#715A4D]">${sem.name}</h4>
+                        <p class="text-sm text-gray-600">Dates: ${sem.startDate} to ${sem.endDate}</p>
+                        <p class="text-sm text-gray-600">Status: ${sem.status}</p>
+                    </div>
+                    <div>
+                        <button class="btn-secondary px-3 py-1 rounded-md text-sm" onclick="deleteItem('semester', ${sem.id})">Delete</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function deleteItem(type, id) {
+            if (confirm(`Are you sure you want to delete this ${type}?`)) {
+                if (type === 'course') {
+                    courses = courses.filter(item => item.id !== id);
+                    renderCourses();
+                } else if (type === 'class') {
+                    classes = classes.filter(item => item.id !== id);
+                    renderClasses();
+                } else if (type === 'semester') {
+                    semesters = semesters.filter(item => item.id !== id);
+                    renderSemesters();
+                }
+                updateDashboardMetrics();
+            }
+        }
+
+        function renderSubjects(filter) {
+            const grid = document.getElementById('subjects-grid');
+            grid.innerHTML = '';
+            const filteredData = subjectData.filter(subject => {
+                if (filter === 'all') return true;
+                if (Array.isArray(subject.level)) {
+                    return subject.level.includes(filter);
+                }
+                return subject.level === filter;
+            });
+
+            filteredData.forEach(subject => {
+                const card = document.createElement('div');
+                card.className = 'bg-stone-50 p-4 rounded-lg border border-stone-200';
+
+                let levelText = Array.isArray(subject.level) ? subject.level.join(' & ') : subject.level;
+
+                card.innerHTML = `
+                    <h4 class="font-bold text-md text-[#715A4D]">${subject.name}</h4>
+                    <p class="text-sm text-gray-500 mt-1">${levelText}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function setupFilters() {
+            const buttons = document.querySelectorAll('#filter-buttons button');
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    buttons.forEach(btn => {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-secondary');
+                    });
+                    button.classList.add('btn-primary');
+                    button.classList.remove('btn-secondary');
+                    renderSubjects(button.dataset.filter);
+                });
+            });
+        }
+
+        function setupChart() {
+            const ctx = document.getElementById('subjectsChart').getContext('2d');
+            const oLevelCount = subjectData.filter(s => Array.isArray(s.level) ? s.level.includes('O.LEVEL') : s.level === 'O.LEVEL').length;
+            const aLevelCount = subjectData.filter(s => Array.isArray(s.level) ? s.level.includes('A.LEVEL') : s.level === 'A.LEVEL').length;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['O-Level', 'A-Level'],
+                    datasets: [{
+                        label: '# of Subjects',
+                        data: [oLevelCount, aLevelCount],
+                        backgroundColor: [
+                            'rgba(90, 141, 155, 0.6)', /* New accent color */
+                            'rgba(113, 169, 184, 0.6)' /* Lighter accent color */
+                        ],
+                        borderColor: [
+                            'rgba(90, 141, 155, 1)',
+                            'rgba(113, 169, 184, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#F0F0F0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
